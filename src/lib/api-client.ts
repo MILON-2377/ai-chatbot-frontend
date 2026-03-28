@@ -1,12 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { cookies } from "next/headers";
+
 interface RequestOptions {
     headers?: Record<string, string>;
     cache?: RequestCache;
     next?: NextFetchRequestConfig;
 }
 
-// Industry Standard: Use a consistent response shape
 export interface IClientResponse<T> {
     success: boolean;
     message?: string;
@@ -25,12 +26,34 @@ export default class HttpClient {
         endpoint: string,
         method: string,
         body?: any,
-        options: RequestOptions = {}
+        options: RequestOptions & { params?: Record<string, any> } = {}
     ): Promise<IClientResponse<T>> {
-        const url = `${this.baseUrl}${endpoint}`;
+        let cleanEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+
+        if (options.params) {
+            const searchParams = new URLSearchParams();
+            Object.entries(options.params).forEach(([key, value]) => {
+                if (value !== undefined && value !== null) {
+                    searchParams.append(key, String(value))
+                }
+            });
+
+            const queryString = searchParams.toString();
+
+            if (queryString) {
+                cleanEndpoint += `?${queryString}`
+            }
+        }
+
+        const fullUrl = `${this.baseUrl}${cleanEndpoint}`;
+
+
+        const cookieStore = await cookies();
+        const cookieHeader = cookieStore.toString();
 
         const headers: Record<string, string> = {
             "Content-Type": "application/json",
+            "Cookie": cookieHeader,
             ...options.headers,
 
         };
@@ -40,30 +63,24 @@ export default class HttpClient {
             headers,
             body: body ? JSON.stringify(body) : undefined,
             cache: options.cache,
-            next: options.next
+            next: options.next,
+            credentials: "include",
         };
 
         try {
-            const response = await fetch(url, config);
+            const response = await fetch(fullUrl, config);
 
-            // Handle empty responses (like 204 No Content)
             const isJson = response.headers.get("content-type")?.includes("application/json");
             const data = isJson ? await response.json() : {};
 
             if (!response.ok) {
-                // FIXED: Don't await response.status, it's a property, not a promise
                 return {
                     success: false,
                     error: data.message || `HTTP Error: ${response.status}`,
                 };
             }
 
-            // Return the response in your IClientResponse shape
-            return {
-                success: true,
-                message: data.message,
-                data: data.data || data // Handles nested or flat data structures
-            };
+            return data;
 
         } catch (error) {
             console.error(`[API Error] ${method} ${endpoint}:`, error);
@@ -75,12 +92,11 @@ export default class HttpClient {
     }
 
     // PUBLIC METHODS
-    public get<T>(endpoint: string, options?: RequestOptions) {
+    public get<T>(endpoint: string, options?: RequestOptions & { params?: Record<string, any> }) {
         return this.request<T>(endpoint, "GET", undefined, options);
     }
 
     public post<T>(endpoint: string, body: any, options?: RequestOptions) {
-        // FIXED: Typo was "POS", changed to "POST"
         return this.request<T>(endpoint, "POST", body, options);
     }
 

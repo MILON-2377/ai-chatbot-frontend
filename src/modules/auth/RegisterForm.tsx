@@ -6,8 +6,10 @@ import Button from "../ui/Button";
 import {
   RegisterInput,
   RegisterSchema,
-} from "./validation/register.validation";
-import { registerUserAction } from "@/src/service/auth/register.action";
+} from "./auth.validation";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+import { registerAction } from "@/src/service/auth/auth.actions";
 
 export default function RegisterForm() {
   const {
@@ -18,14 +20,17 @@ export default function RegisterForm() {
     resolver: zodResolver(RegisterSchema),
   });
 
+  const route = useRouter();
+
   const onSubmit = async (data: RegisterInput) => {
-    const response = await registerUserAction(data);
+    const response = await registerAction(data);
 
     if (!response.success) {
-      console.log("failed to register user", response.error);
+      return toast.error(response.error);
     }
 
-    console.log("user register successfully", response);
+    toast.success("Registration successfull");
+    return route.push(`/verify-email?email=${data.email}`);
   };
 
   return (

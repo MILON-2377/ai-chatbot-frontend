@@ -3,32 +3,25 @@
 import { useState, useRef, KeyboardEvent } from "react";
 import { motion } from "motion/react";
 import { ArrowUp, Loader2 } from "lucide-react";
-import { useRouter } from "next/navigation";
 
 export default function ChatInput({ chatId }: { chatId?: string }) {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const router = useRouter();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const handleSubmit = async () => {
     if (!input.trim() || isLoading) return;
 
-    setIsLoading(true);
+    const messageToSend = input.trim();
+    setInput("");
 
-    if (!chatId) {
-      // 1. Create new chat and get ID
-      const response = await fetch("/api/chats", {
-        method: "POST",
-        body: JSON.stringify({ message: input }),
-      });
-      const { id } = await response.json();
-
-      // 2. Redirect to new thread
-      router.push(`/chat/${id}`);
+    if (chatId) {
+      window.dispatchEvent(
+        new CustomEvent("aura-send-message", {
+          detail: { message: messageToSend, chatId },
+        }),
+      );
     } else {
-      // 3. Just stream the message in current thread
-      // This is where you'd trigger your streaming handler
       console.log("Sending to existing chat:", chatId);
     }
 
@@ -55,7 +48,7 @@ export default function ChatInput({ chatId }: { chatId?: string }) {
         onKeyDown={handleKeyDown}
         placeholder="Ask anything..."
         rows={1}
-        className="w-full max-h-[200px] bg-transparent border-none focus:outline-none px-4 py-3 text-white placeholder-slate-500 resize-none"
+        className="w-full max-h-50 bg-transparent border-none focus:outline-none px-4 py-3 text-white placeholder-slate-500 resize-none"
       />
 
       <div className="flex justify-end px-2 pb-1">

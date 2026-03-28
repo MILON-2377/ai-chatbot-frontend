@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import jwt, { JwtPayload } from "jsonwebtoken";
+import CookieService from "./cookieService";
 
 export default class TokenService {
 
@@ -31,11 +32,11 @@ export default class TokenService {
         };
     };
 
-    public static getTokenRemainingSeconds = async (token: string, tokenSecret: string): Promise<number | null> => {
+    public static getTokenRemainingSeconds = async (token: string): Promise<number | null> => {
         try {
             if (!token) return null;
 
-            const payload = this.verifyToken(token, tokenSecret);
+            const payload = jwt.decode(token) as JwtPayload;
 
             if (payload && payload.exp) {
                 const currentTime = Math.floor(Date.now() / 1000);
@@ -50,4 +51,25 @@ export default class TokenService {
             return null;
         }
     }
+
+    public static setTokenInCookie = async (
+        name: string,
+        token: string,
+        fallbackMaxAgeInSeconds = 60 * 60 * 24
+    ) => {
+        let maxAgeInSeconds;
+
+        if (name !== "better-auth.session_token") {
+            maxAgeInSeconds = await this.getTokenRemainingSeconds(token);
+        }
+
+        await CookieService.setCookie(name, token, maxAgeInSeconds || fallbackMaxAgeInSeconds)
+
+    };
+
+    public static isTokenExpired = async (token: string): Promise<boolean> => {
+        const remainingSeconds = await this.getTokenRemainingSeconds(token);
+        return remainingSeconds === 0;
+    }
+
 }

@@ -10,7 +10,7 @@ export default function DashboardLayout({
       <Sidebar />
 
       <main className="flex-1 h-full overflow-y-auto relative">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,_rgba(56,189,248,0.03)_0%,_transparent_50%)] pointer-events-none" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(56,189,248,0.03)_0%,transparent_50%)] pointer-events-none" />
 
         <div className="relative z-10 h-full">{children}</div>
       </main>

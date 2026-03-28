@@ -1,40 +1,34 @@
 import { cookies } from "next/headers";
-import TokenService from "./tokenService";
-import { getEnv } from "../config/env.config";
 
 export default class CookieService {
-    
-    public static setAuthCookies = async (accessToken: string, refreshToken: string) => {
+
+    public static setCookie = async (
+        name: string,
+        value: string,
+        maxAgeInSeconds: number
+
+    ) => {
         const cookieStore = await cookies();
-        const isProd = process.env.NODE_ENV === "production";
 
-        // 1. Calculate remaining time for BOTH tokens independently
-        const accessRemaining = await TokenService.getTokenRemainingSeconds(
-            accessToken, 
-            getEnv.JWT_ACCESS_SECRET
-        );
-        
-        const refreshRemaining = await TokenService.getTokenRemainingSeconds(
-            refreshToken, 
-            getEnv.JWT_REFRESH_SECRET
-        );
-
-        // 2. Set Access Token
-        cookieStore.set(getEnv.ACCESS_TOKEN_NAME, accessToken, {
+        cookieStore.set(name, value, {
             httpOnly: true,
-            secure: isProd,
+            secure: true,
             sameSite: "lax",
             path: "/",
-            maxAge: accessRemaining || 3600, 
-        });
-
-        // 3. Set Refresh Token
-        cookieStore.set(getEnv.REFRESH_TOKEN_NAME, refreshToken, {
-            httpOnly: true,
-            secure: isProd,
-            sameSite: "lax",
-            path: "/",
-            maxAge: refreshRemaining || 604800, 
+            maxAge: maxAgeInSeconds || 3600,
         });
     }
+
+
+    public static getCookie = async (name: string) => {
+        const cookieStore = await cookies();
+
+        return cookieStore.get(name)?.value;
+    }
+
+    public static clearCookie = async (name: string) => {
+        const cookieStore = await cookies();
+        cookieStore.delete(name);
+    }
+
 }
